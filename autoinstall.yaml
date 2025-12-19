@@ -93,8 +93,7 @@ autoinstall:
       EOFSERVICE
 
     # Download first-boot script from GitHub
-    # NOTE: Change this URL to your actual bootstrap repo after pushing
-    - curtin in-target --target=/target -- curl -fsSL https://raw.githubusercontent.com/Beta-Techno/bootstrap/main/scripts/first-boot.sh -o /usr/local/bin/first-boot.sh
+    - curtin in-target --target=/target -- curl -fsSL https://raw.githubusercontent.com/Beta-Techno/boot/main/scripts/first-boot.sh -o /usr/local/bin/first-boot.sh
 
     # Make it executable
     - curtin in-target --target=/target -- chmod +x /usr/local/bin/first-boot.sh
