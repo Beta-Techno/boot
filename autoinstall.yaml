@@ -67,9 +67,6 @@ autoinstall:
 
   # Late commands - run after installation
   late-commands:
-    # Set correct permissions on deploy home
-    - curtin in-target --target=/target -- chown -R deploy:deploy /home/deploy
-
     # Create systemd service for first-boot
     - |
       cat > /target/etc/systemd/system/first-boot.service <<'EOFSERVICE'
