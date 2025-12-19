@@ -36,7 +36,7 @@ autoinstall:
     username: deploy
     # Default password: "deploy123"
     # Generate your own: openssl passwd -6 YourPasswordHere
-    password: "$6$rounds=4096$saltsalt$XpRm7VF5H8eQVz8KpJLFhZvB5WqVqKqVVqVK9vKqJ.vKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvK0"
+    password: "$6$saltsalt$qoMuYLhl7B.WwgdmXALPkvy9T2qT5Dm1caMs7qKYOThcHEsivvkPFSVrPZMdtvjDdpUtRGDwhagMSgf3YAmVT1"
 
   # SSH configuration
   ssh:
