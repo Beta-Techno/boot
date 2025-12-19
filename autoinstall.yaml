@@ -64,14 +64,19 @@ autoinstall:
     timezone: America/New_York
     package_update: true
     package_upgrade: false  # Don't upgrade during install (faster)
+    # Ensure deploy user is in sudo group (usually automatic, but explicit is better)
+    users:
+      - name: deploy
+        groups: [sudo, users]
+        shell: /bin/bash
 
   # Late commands - run after installation
   late-commands:
-    # Add deploy user to sudo group with NOPASSWD for automation
-    - curtin in-target --target=/target -- usermod -aG sudo deploy
+    # Configure passwordless sudo for deploy user (created by identity section)
+    # User will be added to sudo group automatically by identity config
     - |
       echo 'deploy ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/deploy
-    - curtin in-target --target=/target -- chmod 0440 /target/etc/sudoers.d/deploy
+      chmod 0440 /target/etc/sudoers.d/deploy
 
     # Create systemd service for first-boot
     - |
