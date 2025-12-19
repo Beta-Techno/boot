@@ -1,0 +1,109 @@
+#cloud-config
+# Ubuntu Server 24.04 LTS autoinstall configuration
+# Calls existing working anvil install process
+
+autoinstall:
+  version: 1
+
+  # Locale and keyboard
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+    variant: ''
+
+  # Network - DHCP for quick setup
+  network:
+    version: 2
+    ethernets:
+      all-en:
+        match:
+          name: "en*"
+        dhcp4: true
+      all-eth:
+        match:
+          name: "eth*"
+        dhcp4: true
+
+  # Storage - simple LVM setup
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+
+  # Identity - CUSTOMIZE THESE
+  identity:
+    hostname: ubuntu-node
+    username: deploy
+    # Default password: "deploy123"
+    # Generate your own: openssl passwd -6 YourPasswordHere
+    password: "$6$rounds=4096$saltsalt$XpRm7VF5H8eQVz8KpJLFhZvB5WqVqKqVVqVK9vKqJ.vKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvKvK0"
+
+  # SSH configuration
+  ssh:
+    install-server: true
+    allow-pw: true
+    # Add your SSH public key here for passwordless login:
+    authorized-keys: []
+      # - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGExampleKeyHere your-email@example.com"
+
+  # Packages to install during setup
+  packages:
+    - curl
+    - wget
+    - git
+    - openssh-server
+
+  # Disable automatic updates during installation
+  apt:
+    geoip: true
+    disable_components: []
+    preserve_sources_list: false
+
+  # User data - additional cloud-init config
+  user-data:
+    timezone: America/New_York
+    package_update: true
+    package_upgrade: false  # Don't upgrade during install (faster)
+
+  # Late commands - run after installation
+  late-commands:
+    # Set correct permissions on deploy home
+    - curtin in-target --target=/target -- chown -R deploy:deploy /home/deploy
+
+    # Create systemd service for first-boot
+    - |
+      cat > /target/etc/systemd/system/first-boot.service <<'EOFSERVICE'
+      [Unit]
+      Description=First boot provisioning (calls anvil)
+      After=network-online.target
+      Wants=network-online.target
+      ConditionPathExists=!/var/lib/first-boot-complete
+
+      [Service]
+      Type=oneshot
+      User=root
+      ExecStart=/usr/local/bin/first-boot.sh
+      ExecStartPost=/usr/bin/touch /var/lib/first-boot-complete
+      StandardOutput=journal+console
+      StandardError=journal+console
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+      EOFSERVICE
+
+    # Download first-boot script from GitHub
+    # NOTE: Change this URL to your actual bootstrap repo after pushing
+    - curtin in-target --target=/target -- curl -fsSL https://raw.githubusercontent.com/Beta-Techno/bootstrap/main/scripts/first-boot.sh -o /usr/local/bin/first-boot.sh
+
+    # Make it executable
+    - curtin in-target --target=/target -- chmod +x /usr/local/bin/first-boot.sh
+
+    # Enable the service
+    - curtin in-target --target=/target -- systemctl enable first-boot.service
+
+    # Set timezone
+    - curtin in-target --target=/target -- timedatectl set-timezone America/New_York
+
+  # Shutdown after installation
+  shutdown: reboot
