@@ -67,6 +67,12 @@ autoinstall:
 
   # Late commands - run after installation
   late-commands:
+    # Add deploy user to sudo group with NOPASSWD for automation
+    - curtin in-target --target=/target -- usermod -aG sudo deploy
+    - |
+      echo 'deploy ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/deploy
+    - curtin in-target --target=/target -- chmod 0440 /target/etc/sudoers.d/deploy
+
     # Create systemd service for first-boot
     - |
       cat > /target/etc/systemd/system/first-boot.service <<'EOFSERVICE'
@@ -78,7 +84,7 @@ autoinstall:
 
       [Service]
       Type=oneshot
-      User=root
+      User=deploy
       ExecStart=/usr/local/bin/first-boot.sh
       ExecStartPost=/usr/bin/touch /var/lib/first-boot-complete
       StandardOutput=journal+console
