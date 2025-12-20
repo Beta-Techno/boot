@@ -78,6 +78,12 @@ autoinstall:
       echo 'deploy ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/deploy
       chmod 0440 /target/etc/sudoers.d/deploy
 
+    # Pre-create log file with proper ownership for deploy user
+    - |
+      touch /target/var/log/first-boot.log
+      chown 1000:1000 /target/var/log/first-boot.log
+      chmod 0644 /target/var/log/first-boot.log
+
     # Create systemd service for first-boot
     - |
       cat > /target/etc/systemd/system/first-boot.service <<'EOFSERVICE'
@@ -91,7 +97,7 @@ autoinstall:
       Type=oneshot
       User=deploy
       ExecStart=/usr/local/bin/first-boot.sh
-      ExecStartPost=/usr/bin/touch /var/lib/first-boot-complete
+      ExecStartPost=/usr/bin/sudo /usr/bin/touch /var/lib/first-boot-complete
       StandardOutput=journal+console
       StandardError=journal+console
       RemainAfterExit=yes
