@@ -92,7 +92,7 @@ autoinstall:
 
       if systemctl is-active --quiet first-boot.service 2>/dev/null; then
           echo "========================================"
-          echo "⚙️  SYSTEM PROVISIONING IN PROGRESS"
+          echo "SYSTEM PROVISIONING IN PROGRESS"
           echo "========================================"
           echo ""
           echo "Anvil is automatically configuring this system."
@@ -103,8 +103,8 @@ autoinstall:
       elif [ -f /var/lib/first-boot-complete ]; then
           # Provisioning done, show completion message once
           if [ ! -f "$HOME/.first-boot-notified" ]; then
-              echo "✅ System provisioning completed successfully!"
-              echo "   Check /var/log/first-boot.log for details"
+              echo "System provisioning completed successfully!"
+              echo "Check /var/log/first-boot.log for details"
               touch "$HOME/.first-boot-notified"
           fi
       fi
