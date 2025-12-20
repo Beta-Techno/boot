@@ -84,6 +84,33 @@ autoinstall:
       chown 1000:1000 /target/var/log/first-boot.log
       chmod 0644 /target/var/log/first-boot.log
 
+    # Auto-show provisioning logs on user login
+    - |
+      cat > /target/etc/profile.d/first-boot-monitor.sh <<'EOFPROFILE'
+      #!/bin/bash
+      # Auto-show first-boot logs if provisioning is in progress
+
+      if systemctl is-active --quiet first-boot.service 2>/dev/null; then
+          echo "========================================"
+          echo "⚙️  SYSTEM PROVISIONING IN PROGRESS"
+          echo "========================================"
+          echo ""
+          echo "Anvil is automatically configuring this system."
+          echo "Following provisioning logs (Ctrl+C to detach):"
+          echo ""
+          sleep 2
+          sudo journalctl -u first-boot.service -f
+      elif [ -f /var/lib/first-boot-complete ]; then
+          # Provisioning done, show completion message once
+          if [ ! -f "$HOME/.first-boot-notified" ]; then
+              echo "✅ System provisioning completed successfully!"
+              echo "   Check /var/log/first-boot.log for details"
+              touch "$HOME/.first-boot-notified"
+          fi
+      fi
+      EOFPROFILE
+      chmod +x /target/etc/profile.d/first-boot-monitor.sh
+
     # Create systemd service for first-boot
     - |
       cat > /target/etc/systemd/system/first-boot.service <<'EOFSERVICE'
