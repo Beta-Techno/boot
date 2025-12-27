@@ -15,6 +15,9 @@ echo "========================================"
 
 # Configuration (can be overridden via environment variables)
 ANVIL_INSTALL_URL="${ANVIL_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/install.sh}"
+ANVIL_CLI_INSTALL_URL="${ANVIL_CLI_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/scripts/install-anvil-cli.sh}"
+ANVIL_CLI_BINARY_URL="${ANVIL_CLI_BINARY_URL:-https://github.com/Beta-Techno/anvil/releases/latest/download/anvil-linux-amd64}"
+ANVIL_CLI_INSTALL_DIR="${ANVIL_CLI_INSTALL_DIR:-/usr/local/bin}"
 TAGS="${TAGS:-all}"
 ANSIBLE_ARGS="${ANSIBLE_ARGS:---skip-tags docker_desktop}"
 
@@ -35,23 +38,13 @@ check_network() {
     log_info "Network OK"
 }
 
-run_anvil_install() {
-    log_info "Running anvil installation..."
-    log_info "URL: $ANVIL_INSTALL_URL"
-    log_info "TAGS: $TAGS"
-    log_info "ANSIBLE_ARGS: $ANSIBLE_ARGS"
-
-    # Run the existing working command
-    curl -fsSL "$ANVIL_INSTALL_URL" | \
-        TAGS="$TAGS" ANSIBLE_ARGS="$ANSIBLE_ARGS" bash
-
-    if [ $? -eq 0 ]; then
-        log_info "Anvil installation completed successfully"
-        return 0
-    else
-        log_error "Anvil installation failed"
-        return 1
-    fi
+install_cli() {
+    log_info "Installing Anvil CLI (binary: $ANVIL_CLI_BINARY_URL)"
+    tmp_script="$(mktemp)"
+    curl -fsSL "$ANVIL_CLI_INSTALL_URL" -o "$tmp_script"
+    chmod +x "$tmp_script"
+    INSTALL_DIR="$ANVIL_CLI_INSTALL_DIR" BINARY_URL="$ANVIL_CLI_BINARY_URL" bash "$tmp_script"
+    rm -f "$tmp_script"
 }
 
 main() {
@@ -60,10 +53,12 @@ main() {
     # Check prerequisites
     check_network || exit 1
 
-    # Run anvil (your existing working flow)
-    run_anvil_install || exit 1
+    install_cli || exit 1
 
-    log_info "First-boot provisioning completed successfully"
+    log_info "Anvil CLI installed. Log in and run 'anvil up' to start provisioning."
+    touch /var/lib/first-boot-complete
+
+    log_info "First-boot provisioning completed successfully (CLI installed, awaiting user run)"
     echo "========================================"
     echo "First Boot Complete"
     echo "Time: $(date)"
