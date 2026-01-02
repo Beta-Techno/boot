@@ -14,12 +14,10 @@ echo "Time: $(date)"
 echo "========================================"
 
 # Configuration (can be overridden via environment variables)
-ANVIL_INSTALL_URL="${ANVIL_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/install.sh}"
-ANVIL_CLI_INSTALL_URL="${ANVIL_CLI_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/scripts/install-anvil-cli.sh}"
+ANVIL_CLI_INSTALL_URL="${ANVIL_CLI_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/install.sh}"
 ANVIL_CLI_BINARY_URL="${ANVIL_CLI_BINARY_URL:-https://github.com/Beta-Techno/anvil/releases/latest/download/anvil-linux-amd64}"
 ANVIL_CLI_INSTALL_DIR="${ANVIL_CLI_INSTALL_DIR:-/usr/local/bin}"
-TAGS="${TAGS:-all}"
-ANSIBLE_ARGS="${ANSIBLE_ARGS:---skip-tags docker_desktop}"
+ANVIL_RUN_COMMAND="${ANVIL_RUN_COMMAND:-anvil up}"
 
 log_info() {
     echo "[INFO] $*"
@@ -31,8 +29,8 @@ log_error() {
 
 check_network() {
     log_info "Checking network connectivity..."
-    if ! ping -c 1 github.com &>/dev/null; then
-        log_error "No network connectivity"
+    if ! curl -fsSL https://github.com &>/dev/null; then
+        log_error "Unable to reach github.com via HTTPS"
         return 1
     fi
     log_info "Network OK"
@@ -47,6 +45,15 @@ install_cli() {
     rm -f "$tmp_script"
 }
 
+run_anvil() {
+    log_info "Running provisioning command: $ANVIL_RUN_COMMAND"
+    if ! eval "$ANVIL_RUN_COMMAND"; then
+        log_error "Provisioning command failed"
+        return 1
+    fi
+    log_info "Anvil provisioning completed"
+}
+
 main() {
     log_info "Starting first-boot provisioning"
 
@@ -54,11 +61,9 @@ main() {
     check_network || exit 1
 
     install_cli || exit 1
+    run_anvil || exit 1
 
-    log_info "Anvil CLI installed. Log in and run 'anvil up' to start provisioning."
-    touch /var/lib/first-boot-complete
-
-    log_info "First-boot provisioning completed successfully (CLI installed, awaiting user run)"
+    log_info "First-boot provisioning completed successfully"
     echo "========================================"
     echo "First Boot Complete"
     echo "Time: $(date)"
