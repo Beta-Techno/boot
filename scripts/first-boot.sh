@@ -56,13 +56,16 @@ mkdir -p "$(dirname "$SENTINEL")"
 if [ -f "$SENTINEL" ]; then
     exit 0
 fi
-gnome-terminal -- bash -lc 'echo "========================================"; \
+nohup gnome-terminal -- bash -lc 'echo "========================================"; \
   echo "Anvil CLI installed."; \
   echo "Enter your age secret key when prompted to begin provisioning."; \
   echo "========================================"; \
-  anvil up && touch ~/.config/anvil/first-login-complete; \
+  if anvil up; then \
+    touch ~/.config/anvil/first-login-complete; \
+  fi; \
   echo "Anvil run finished (exit $?). Press Enter to close."; \
-  read'
+  read' >/dev/null 2>&1 &
+exit 0
 EOS
     chmod +x "$home_dir/.local/bin/anvil-first-login.sh"
 
@@ -71,9 +74,12 @@ EOS
 Type=Application
 Name=Anvil Provisioning
 Exec=/home/deploy/.local/bin/anvil-first-login.sh
+X-GNOME-Autostart-Delay=5
 X-GNOME-Autostart-enabled=true
 OnlyShowIn=GNOME;Unity;
 EOF
+
+    chown -R deploy:deploy "$home_dir/.local/bin" "$home_dir/.config/autostart"
 }
 
 main() {
