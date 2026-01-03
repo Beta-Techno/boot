@@ -17,7 +17,6 @@ echo "========================================"
 ANVIL_CLI_INSTALL_URL="${ANVIL_CLI_INSTALL_URL:-https://raw.githubusercontent.com/Beta-Techno/anvil/main/install.sh}"
 ANVIL_CLI_BINARY_URL="${ANVIL_CLI_BINARY_URL:-https://github.com/Beta-Techno/anvil/releases/latest/download/anvil-linux-amd64}"
 ANVIL_CLI_INSTALL_DIR="${ANVIL_CLI_INSTALL_DIR:-/usr/local/bin}"
-ANVIL_RUN_COMMAND="${ANVIL_RUN_COMMAND:-anvil up}"
 
 log_info() {
     echo "[INFO] $*"
@@ -45,13 +44,36 @@ install_cli() {
     rm -f "$tmp_script"
 }
 
-run_anvil() {
-    log_info "Running provisioning command: $ANVIL_RUN_COMMAND"
-    if ! eval "$ANVIL_RUN_COMMAND"; then
-        log_error "Provisioning command failed"
-        return 1
-    fi
-    log_info "Anvil provisioning completed"
+setup_autostart_prompt() {
+    log_info "Configuring first-login prompt"
+    local home_dir="/home/deploy"
+    mkdir -p "$home_dir/.local/bin" "$home_dir/.config/autostart"
+    cat > "$home_dir/.local/bin/anvil-first-login.sh" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+SENTINEL="$HOME/.config/anvil/first-login-complete"
+mkdir -p "$(dirname "$SENTINEL")"
+if [ -f "$SENTINEL" ]; then
+    exit 0
+fi
+gnome-terminal -- bash -lc 'echo "========================================"; \
+  echo "Anvil CLI installed."; \
+  echo "Enter your age secret key when prompted to begin provisioning."; \
+  echo "========================================"; \
+  anvil up && touch ~/.config/anvil/first-login-complete; \
+  echo "Anvil run finished (exit $?). Press Enter to close."; \
+  read'
+EOS
+    chmod +x "$home_dir/.local/bin/anvil-first-login.sh"
+
+    cat > "$home_dir/.config/autostart/anvil-first-login.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Anvil Provisioning
+Exec=/home/deploy/.local/bin/anvil-first-login.sh
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=GNOME;Unity;
+EOF
 }
 
 main() {
@@ -61,7 +83,7 @@ main() {
     check_network || exit 1
 
     install_cli || exit 1
-    run_anvil || exit 1
+    setup_autostart_prompt || true
 
     log_info "First-boot provisioning completed successfully"
     echo "========================================"
@@ -69,8 +91,8 @@ main() {
     echo "Time: $(date)"
     echo "========================================"
     echo ""
-    echo "System is ready to use!"
-    echo "Check /var/log/first-boot.log for details"
+    echo "System is ready. Please log in and follow the terminal prompt to run 'anvil up'."
+    echo "Logs: /var/log/first-boot.log"
 }
 
 main "$@"
