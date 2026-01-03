@@ -44,44 +44,6 @@ install_cli() {
     rm -f "$tmp_script"
 }
 
-setup_autostart_prompt() {
-    log_info "Configuring first-login prompt"
-    local home_dir="/home/deploy"
-    mkdir -p "$home_dir/.local/bin" "$home_dir/.config/autostart"
-    cat > "$home_dir/.local/bin/anvil-first-login.sh" <<'EOS'
-#!/usr/bin/env bash
-set -euo pipefail
-SENTINEL="$HOME/.config/anvil/first-login-complete"
-mkdir -p "$(dirname "$SENTINEL")"
-if [ -f "$SENTINEL" ]; then
-    exit 0
-fi
-nohup gnome-terminal -- bash -lc 'echo "========================================"; \
-  echo "Anvil CLI installed."; \
-  echo "Enter your age secret key when prompted to begin provisioning."; \
-  echo "========================================"; \
-  if anvil up; then \
-    touch ~/.config/anvil/first-login-complete; \
-  fi; \
-  echo "Anvil run finished (exit $?). Press Enter to close."; \
-  read' >/dev/null 2>&1 &
-exit 0
-EOS
-    chmod +x "$home_dir/.local/bin/anvil-first-login.sh"
-
-    cat > "$home_dir/.config/autostart/anvil-first-login.desktop" <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=Anvil Provisioning
-Exec=/home/deploy/.local/bin/anvil-first-login.sh
-X-GNOME-Autostart-Delay=5
-X-GNOME-Autostart-enabled=true
-OnlyShowIn=GNOME;Unity;
-EOF
-
-    chown -R deploy:deploy "$home_dir/.local/bin" "$home_dir/.config/autostart"
-}
-
 main() {
     log_info "Starting first-boot provisioning"
 
@@ -89,7 +51,6 @@ main() {
     check_network || exit 1
 
     install_cli || exit 1
-    setup_autostart_prompt || true
 
     log_info "First-boot provisioning completed successfully"
     echo "========================================"

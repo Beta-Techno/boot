@@ -86,30 +86,19 @@ autoinstall:
 
     # Auto-show provisioning logs on user login
     - |
-      cat > /target/etc/profile.d/first-boot-monitor.sh <<'EOFPROFILE'
+      cat > /target/etc/profile.d/first-boot-message.sh <<'EOFPROFILE'
       #!/bin/bash
-      # Auto-show first-boot logs if provisioning is in progress
-
-      if systemctl is-active --quiet first-boot.service 2>/dev/null; then
-          echo "========================================"
-          echo "SYSTEM PROVISIONING IN PROGRESS"
-          echo "========================================"
-          echo ""
-          echo "Anvil is automatically configuring this system."
-          echo "Following provisioning logs (Ctrl+C to detach):"
-          echo ""
-          sleep 2
-          sudo journalctl -u first-boot.service -f
-      elif [ -f /var/lib/first-boot-complete ]; then
-          # Provisioning done, show completion message once
-          if [ ! -f "$HOME/.first-boot-notified" ]; then
-              echo "System provisioning completed successfully!"
-              echo "Check /var/log/first-boot.log for details"
-              touch "$HOME/.first-boot-notified"
+      if [ -f /var/lib/first-boot-complete ]; then
+          if [ ! -f "$HOME/.anvil-first-login-msg" ]; then
+              echo "========================================"
+              echo "Anvil CLI installed. Run 'anvil up' to begin provisioning."
+              echo "Logs: /var/log/first-boot.log"
+              echo "========================================"
+              touch "$HOME/.anvil-first-login-msg"
           fi
       fi
       EOFPROFILE
-      chmod +x /target/etc/profile.d/first-boot-monitor.sh
+      chmod +x /target/etc/profile.d/first-boot-message.sh
 
     # Create systemd service for first-boot
     - |
@@ -127,7 +116,6 @@ autoinstall:
       ExecStartPost=/usr/bin/sudo /usr/bin/touch /var/lib/first-boot-complete
       StandardOutput=journal+console
       StandardError=journal+console
-      RemainAfterExit=yes
 
       [Install]
       WantedBy=multi-user.target
