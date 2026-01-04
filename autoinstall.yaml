@@ -129,7 +129,6 @@ autoinstall:
 
     # Enable the service
     - curtin in-target --target=/target -- systemctl enable first-boot.service
-    - curtin in-target --target=/target -- sudo -u deploy mkdir -p /home/deploy/.config/systemd/user/timers.target.wants
 
     # Set timezone
     - curtin in-target --target=/target -- timedatectl set-timezone America/New_York

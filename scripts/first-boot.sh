@@ -46,7 +46,11 @@ install_cli() {
 
 setup_autostart_prompt() {
     local homeDir="/home/deploy"
-    mkdir -p "$homeDir/.local/bin" "$homeDir/.config/systemd/user" "$homeDir/.config/anvil"
+    mkdir -p \
+      "$homeDir/.local/bin" \
+      "$homeDir/.config/anvil" \
+      "$homeDir/.config/systemd/user" \
+      "$homeDir/.config/systemd/user/timers.target.wants"
 
     cat > "$homeDir/.local/bin/anvil-first-login.sh" <<'EOS'
 #!/usr/bin/env bash
@@ -118,7 +122,7 @@ WantedBy=timers.target
 EOF
 
     ln -sf ../anvil-first-login.timer "$homeDir/.config/systemd/user/timers.target.wants/anvil-first-login.timer"
-    chown -R deploy:deploy "$homeDir/.local" "$homeDir/.config"
+    chown -R deploy:deploy "$homeDir/.local" "$homeDir/.config" 2>/dev/null || true
 }
 
 main() {
