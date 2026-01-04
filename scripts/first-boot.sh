@@ -77,7 +77,7 @@ if command -v gnome-terminal >/dev/null 2>&1; then
     term_cmd=(gnome-terminal --wait --)
     term_label="gnome-terminal"
 elif command -v x-terminal-emulator >/dev/null 2>&1; then
-    term_cmd=(x-terminal-emulator -e)
+    term_cmd=(x-terminal-emulator --)
     term_label="x-terminal-emulator"
 else
     command -v notify-send >/dev/null 2>&1 && notify-send "Anvil" "Open a terminal and run: anvil up"
