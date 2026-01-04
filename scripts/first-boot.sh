@@ -50,7 +50,7 @@ setup_autostart_prompt() {
       "$homeDir/.local/bin" \
       "$homeDir/.config/anvil" \
       "$homeDir/.config/systemd/user" \
-      "$homeDir/.config/systemd/user/paths.target.wants"
+      "$homeDir/.config/systemd/user/graphical-session.target.wants"
 
     cat > "$homeDir/.local/bin/anvil-first-login.sh" <<'EOS'
 #!/usr/bin/env bash
@@ -126,10 +126,10 @@ PathExists=/var/lib/first-boot-complete
 Unit=anvil-first-login.service
 
 [Install]
-WantedBy=paths.target
+WantedBy=graphical-session.target
 EOF
 
-    ln -sf ../anvil-first-login.path "$homeDir/.config/systemd/user/paths.target.wants/anvil-first-login.path"
+    ln -sf ../anvil-first-login.path "$homeDir/.config/systemd/user/graphical-session.target.wants/anvil-first-login.path"
     chown -R deploy:deploy "$homeDir/.local" "$homeDir/.config" 2>/dev/null || true
 }
 
