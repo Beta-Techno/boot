@@ -50,7 +50,7 @@ setup_autostart_prompt() {
       "$homeDir/.local/bin" \
       "$homeDir/.config/anvil" \
       "$homeDir/.config/systemd/user" \
-      "$homeDir/.config/systemd/user/timers.target.wants"
+      "$homeDir/.config/systemd/user/paths.target.wants"
 
     cat > "$homeDir/.local/bin/anvil-first-login.sh" <<'EOS'
 #!/usr/bin/env bash
@@ -82,7 +82,7 @@ else
 fi
 LOG="$HOME/.config/anvil/anvil-up.log"
 mkdir -p "$(dirname "$LOG")"
-"$term" -- bash --noprofile --norc -lc "echo '========================================'; \
+if ! "$term" -- bash --noprofile --norc -lc "echo '========================================'; \
   echo 'Anvil provisioning'; \
   echo 'Paste AGE key when prompted.'; \
   echo 'Logs: $LOG'; \
@@ -92,7 +92,9 @@ mkdir -p "$(dirname "$LOG")"
   else \
     echo 'FAILED. Sentinel not written.'; \
   fi; \
-  read -rp 'Press Enter to close...';" >/dev/null 2>&1 &
+  read -rp 'Press Enter to close...';" >/dev/null 2>&1 & then
+  echo "[anvil-first-login] Failed to launch terminal ($term). Run 'anvil up' manually." | systemd-cat -t anvil-first-login || true
+fi
 EOS
     chmod +x "$homeDir/.local/bin/anvil-first-login.sh"
 
@@ -109,19 +111,22 @@ Type=oneshot
 ExecStart=%h/.local/bin/anvil-first-login.sh
 EOF
 
-    cat > "$homeDir/.config/systemd/user/anvil-first-login.timer" <<'EOF'
+cat > "$homeDir/.config/systemd/user/anvil-first-login.path" <<'EOF'
 [Unit]
-Description=Run Anvil prompt shortly after login
+Description=Trigger Anvil prompt when first-boot completes
+After=graphical-session.target
+Wants=graphical-session.target
+ConditionPathExists=!%h/.config/anvil/first-login-complete
 
-[Timer]
-OnStartupSec=60
-AccuracySec=10s
+[Path]
+PathExists=/var/lib/first-boot-complete
+Unit=anvil-first-login.service
 
 [Install]
-WantedBy=timers.target
+WantedBy=paths.target
 EOF
 
-    ln -sf ../anvil-first-login.timer "$homeDir/.config/systemd/user/timers.target.wants/anvil-first-login.timer"
+    ln -sf ../anvil-first-login.path "$homeDir/.config/systemd/user/paths.target.wants/anvil-first-login.path"
     chown -R deploy:deploy "$homeDir/.local" "$homeDir/.config" 2>/dev/null || true
 }
 
