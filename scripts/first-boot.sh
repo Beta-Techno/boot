@@ -35,6 +35,20 @@ check_network() {
     log_info "Network OK"
 }
 
+wait_for_apt() {
+    log_info "Waiting for apt/dpkg activity to finish..."
+    while \
+        pgrep -x apt >/dev/null 2>&1 || \
+        pgrep -x apt-get >/dev/null 2>&1 || \
+        pgrep -x dpkg >/dev/null 2>&1 || \
+        fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+        fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+        fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        sleep 5
+    done
+    log_info "apt/dpkg idle"
+}
+
 install_cli() {
     log_info "Installing Anvil CLI (binary: $ANVIL_CLI_BINARY_URL)"
     tmp_script="$(mktemp)"
@@ -140,6 +154,7 @@ main() {
     check_network || exit 1
 
     install_cli || exit 1
+    wait_for_apt || true
     setup_autostart_prompt || true
 
     log_info "First-boot provisioning completed successfully"
