@@ -71,18 +71,21 @@ for _ in {1..90}; do
     fi
     sleep 1
 done
-term=""
+term_cmd=()
+term_label="terminal"
 if command -v gnome-terminal >/dev/null 2>&1; then
-    term="gnome-terminal"
+    term_cmd=(gnome-terminal --wait --)
+    term_label="gnome-terminal"
 elif command -v x-terminal-emulator >/dev/null 2>&1; then
-    term="x-terminal-emulator"
+    term_cmd=(x-terminal-emulator -e)
+    term_label="x-terminal-emulator"
 else
     command -v notify-send >/dev/null 2>&1 && notify-send "Anvil" "Open a terminal and run: anvil up"
     exit 0
 fi
 LOG="$HOME/.config/anvil/anvil-up.log"
 mkdir -p "$(dirname "$LOG")"
-if ! "$term" -- bash --noprofile --norc -lc "echo '========================================'; \
+if ! "${term_cmd[@]}" bash --noprofile --norc -lc "echo '========================================'; \
   echo 'Anvil provisioning'; \
   echo 'Paste AGE key when prompted.'; \
   echo 'Logs: $LOG'; \
@@ -92,8 +95,8 @@ if ! "$term" -- bash --noprofile --norc -lc "echo '=============================
   else \
     echo 'FAILED. Sentinel not written.'; \
   fi; \
-  read -rp 'Press Enter to close...';" >/dev/null 2>&1 & then
-  echo "[anvil-first-login] Failed to launch terminal ($term). Run 'anvil up' manually." | systemd-cat -t anvil-first-login || true
+  read -rp 'Press Enter to close...';" >/dev/null 2>&1; then
+  echo "[anvil-first-login] Failed to launch $term_label. Run 'anvil up' manually." | systemd-cat -t anvil-first-login || true
 fi
 EOS
     chmod +x "$homeDir/.local/bin/anvil-first-login.sh"
