@@ -44,6 +44,83 @@ install_cli() {
     rm -f "$tmp_script"
 }
 
+setup_autostart_prompt() {
+    local homeDir="/home/deploy"
+    mkdir -p "$homeDir/.local/bin" "$homeDir/.config/systemd/user" "$homeDir/.config/anvil"
+
+    cat > "$homeDir/.local/bin/anvil-first-login.sh" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+SENTINEL="$HOME/.config/anvil/first-login-complete"
+mkdir -p "$(dirname "$SENTINEL")"
+if [ -f "$SENTINEL" ]; then
+    exit 0
+fi
+if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+    exit 0
+fi
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}"
+for _ in {1..90}; do
+    if gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+term=""
+if command -v gnome-terminal >/dev/null 2>&1; then
+    term="gnome-terminal"
+elif command -v x-terminal-emulator >/dev/null 2>&1; then
+    term="x-terminal-emulator"
+else
+    command -v notify-send >/dev/null 2>&1 && notify-send "Anvil" "Open a terminal and run: anvil up"
+    exit 0
+fi
+LOG="$HOME/.config/anvil/anvil-up.log"
+mkdir -p "$(dirname "$LOG")"
+"$term" -- bash --noprofile --norc -lc "echo '========================================'; \
+  echo 'Anvil provisioning'; \
+  echo 'Paste AGE key when prompted.'; \
+  echo 'Logs: $LOG'; \
+  if anvil up 2>&1 | tee -a '$LOG'; then \
+    touch '$SENTINEL'; \
+    echo 'SUCCESS. Sentinel written.'; \
+  else \
+    echo 'FAILED. Sentinel not written.'; \
+  fi; \
+  read -rp 'Press Enter to close...';" >/dev/null 2>&1 &
+EOS
+    chmod +x "$homeDir/.local/bin/anvil-first-login.sh"
+
+    cat > "$homeDir/.config/systemd/user/anvil-first-login.service" <<'EOF'
+[Unit]
+Description=Anvil first-login prompt
+After=graphical-session.target
+Wants=graphical-session.target
+ConditionPathExists=/var/lib/first-boot-complete
+ConditionPathExists=!%h/.config/anvil/first-login-complete
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/anvil-first-login.sh
+EOF
+
+    cat > "$homeDir/.config/systemd/user/anvil-first-login.timer" <<'EOF'
+[Unit]
+Description=Run Anvil prompt shortly after login
+
+[Timer]
+OnStartupSec=60
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    ln -sf ../anvil-first-login.timer "$homeDir/.config/systemd/user/timers.target.wants/anvil-first-login.timer"
+    chown -R deploy:deploy "$homeDir/.local" "$homeDir/.config"
+}
+
 main() {
     log_info "Starting first-boot provisioning"
 
@@ -51,6 +128,7 @@ main() {
     check_network || exit 1
 
     install_cli || exit 1
+    setup_autostart_prompt || true
 
     log_info "First-boot provisioning completed successfully"
     echo "========================================"
